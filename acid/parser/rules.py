@@ -5,10 +5,12 @@
 This module defines the parser rules. To define a custom parser rule, use this
 snippet as a template:
 
-	@Parser.register(priority=[n])
-	def [rule_name](self, token_queue):
+	@Parser.register([NodeType], priority=[n])
+	def [rule_name](self):
 		# To consume a token of a given type:
-		expected_token = expect([token type], token_queue)
+		expected_token = self.expect([token type])
+
+		node = self.consume([NodeType to consume])
 
 		...  # Processing tokens
 
@@ -128,11 +130,13 @@ def consume_float_literal(self):
 	token = self.expect(TokenType.FLOAT_LITERAL)
 	return FloatLiteral(float(token.value))
 
+
 @Parser.register(CharLiteral, priority=1)
 def consume_char_literal(self):
 	token = self.expect(TokenType.CHAR_LITERAL)
 	char = token.value.strip("'")
 	return CharLiteral(char)
+
 
 @Parser.register(StringLiteral, priority=1)
 def consume_string_literal(self):
