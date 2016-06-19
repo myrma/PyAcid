@@ -32,7 +32,7 @@ télécharger, puis exécuter la commande suivante dans le terminal:
 #### Windows
 
 ```
-py -3.4 -Bm acid --exec examples/test.acid
+py -3.4 -Bm acid --exec examples\test.acid
 ```
 
 #### Unix (OS X et Linux)
