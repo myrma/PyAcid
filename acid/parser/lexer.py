@@ -111,12 +111,12 @@ def tokenize(code):
 				elif token_type is not TokenType.WHITESPACE:
 						# copy the cursor to avoid unwanted reference
 						endpos = cursor.copy()
-
+						
 						span = SourceSpan(startpos, endpos)
-
-						yield Token(token_type, value, span)
+						tok = Token(token_type, value, span)
+						yield tok
 
 				break
 		else:
 			# when every token type has been tried
-			raise ParseError(cursor, "Failed to tokenize code")
+			raise ParseError(code, cursor, "Failed to tokenize code")

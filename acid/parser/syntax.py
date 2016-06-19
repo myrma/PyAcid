@@ -22,6 +22,7 @@ Contributors: myrma
 from acid.parser.parser import Parser
 from acid.parser.lexer import *
 from acid.parser.ast import *
+from acid.parser.types import SourceSpan
 from acid.exception import *
 
 
@@ -41,44 +42,30 @@ def consume_program(self):
 			instrs.append(instr)
 
 	# returns the resulting Program object.
-	return Program(instrs, self.path)
+	prog = Program(instrs, self.path)
+	prog.span = SourceSpan.between(instrs[0], instrs[-1])
+	return prog
 
 
 @Parser.register(Declaration, priority=1)
 def consume_declaration(self):
-	self.expect(TokenType.LPAREN)
+	first = self.expect(TokenType.LPAREN)
 	self.expect(TokenType.DEFINE)
 
 	atom = self.expect(TokenType.ATOM)
 	name = atom.value
 
 	value = self.consume(Expr)
-	self.expect(TokenType.RPAREN)
-	return Declaration(name, value)
+	last = self.expect(TokenType.RPAREN)
 
-
-@Parser.register(TypeDeclaration, priority=1)
-def consume_type_declaration(self):
-	self.expect(TokenType.LPAREN)
-	self.expect(TokenType.HASTYPE)
-
-	atom = self.expect(TokenType.ATOM)
-	name = atom.value
-
-	value = self.consume(Expr)
-	self.expect(TokenType.RPAREN)
-	return Declaration(name, value)
-
-
-@Parser.register(TopLevelExpr, priority=2)
-def consume_toplevel_expr(self):
-	expr = self.consume(Expr)
-	return TopLevelExpr(expr)
+	decl = Declaration(name, value)
+	decl.span = SourceSpan.between(first, last)
+	return decl
 
 
 @Parser.register(Call, priority=2)
 def consume_call(self):
-	self.expect(TokenType.LPAREN)
+	first = self.expect(TokenType.LPAREN)
 	func = self.consume(Expr)
 
 	args = []
@@ -91,14 +78,16 @@ def consume_call(self):
 		else:
 			args.append(arg)
 
-	self.expect(TokenType.RPAREN)
+	last = self.expect(TokenType.RPAREN)
 
-	return Call(func, args)
+	call = Call(func, args)
+	call.span = SourceSpan.between(first, last)
+	return call
 
 
 @Parser.register(Lambda, priority=1)
 def consume_lambda(self):
-	self.expect(TokenType.LPAREN)
+	first = self.expect(TokenType.LPAREN)
 	self.expect(TokenType.LAMBDA)
 	self.expect(TokenType.LPAREN)
 
@@ -109,33 +98,48 @@ def consume_lambda(self):
 
 	self.expect(TokenType.RPAREN)
 	body = self.consume(Expr)
-	self.expect(TokenType.RPAREN)
-	return Lambda(params, body)
+	last = self.expect(TokenType.RPAREN)
+
+	lam = Lambda(params, body)
+	lam.span = SourceSpan.between(first, last)
+	return lam
 
 
 @Parser.register(Variable, priority=1)
 def consume_variable(self):
 	atom = self.expect(TokenType.ATOM)
-	return Variable(atom.value)
+
+	var = Variable(atom.value)
+	var.span = atom.span
+	return var
 
 
 @Parser.register(IntLiteral, priority=1)
 def consume_int_literal(self):
 	token = self.expect(TokenType.INT_LITERAL)
-	return IntLiteral(int(token.value))
+
+	lit = IntLiteral(int(token.value))
+	lit.span = token.span
+	return lit
 
 
 @Parser.register(FloatLiteral, priority=1)
 def consume_float_literal(self):
 	token = self.expect(TokenType.FLOAT_LITERAL)
-	return FloatLiteral(float(token.value))
+
+	lit = FloatLiteral(float(token.value))
+	lit.span = token.span
+	return lit
 
 
 @Parser.register(CharLiteral, priority=1)
 def consume_char_literal(self):
 	token = self.expect(TokenType.CHAR_LITERAL)
 	char = token.value.strip("'")
-	return CharLiteral(char)
+
+	lit = CharLiteral(char)
+	lit.span = token.span
+	return lit
 
 
 @Parser.register(StringLiteral, priority=1)
@@ -144,4 +148,7 @@ def consume_string_literal(self):
 
 	# todo: find another way to unescape strings
 	string = token.value.strip('"').encode('latin-1').decode('unicode_escape')
-	return StringLiteral(string)
+
+	lit = StringLiteral(string)
+	lit.span = token.span
+	return lit

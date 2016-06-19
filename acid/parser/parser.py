@@ -65,7 +65,13 @@ class Parser:
 
 				try:
 					node = consumer(self)
+
+					if node is None:
+						pos = tmp_queue[0].pos
+						raise ParseError(self.code, pos, 'Consumer returned None')
+
 				except ParseError:
+					# restore previous token list value
 					# assign tmp_queue to reference token_queue
 					self.token_queue[:] = tmp_queue
 
@@ -74,8 +80,12 @@ class Parser:
 					# assign tmp_queue to reference token_queue
 					self.token_queue[:] = tmp_queue
 
-					# when the user tries to call token_queue.pop(0)
-					raise ParseError(self.token_queue[0].pos, 'Unexpected EOF')
+					# when the user tries to call token_queue.pop(0) but all
+					# tokens were consumed
+					raise ParseError(
+						self.code,
+						self.token_queue[0].pos,
+						'Unexpected EOF')
 				else:
 					return node
 
@@ -86,23 +96,68 @@ class Parser:
 		return _decorator_wrapper
 
 
-	def consume(self, node_type):
+	def get_consumer_queue(self, node_type):
 		"""
-		Tries to parse a node of type `node_type` from the token list.
-		This does not affect the list if the function failed to parse.
+		Returns the list of consumers that parses nodes of a give type, taking
+		into account the priorities.
 		"""
 
 		consumers = list(self.consumers[node_type])
 
+		# reverse MRO: walks down the subclass tree
 		for sub_node_type in node_type.sub_types():
 			consumers.extend(self.consumers[sub_node_type])
 
+		# sort the list by priority
 		consumers.sort(key=lambda cons: cons.priority)
+
+		return consumers
+
+	def consume(self, node_type):
+		"""
+		Tries to consume a node of type `node_type` from the token list.
+		This does not affect the list if the function failed to parse.
+		"""
+
+		consumers = self.get_consumer_queue(node_type)
 
 		# tries every concrete nodes of type node_type
 		for consumer in consumers:
 			try:
 				node = consumer(self)
+			except ParseError as e:
+				error = e
+				continue
+			else:
+				return node
+		else:
+			# when every node has been tried, but none succeeded to parse
+			raise error
+
+	def parse(self, node_type):
+		"""
+		Tries to parse a node of type `node_type` from the token list.
+		This does not affect the list if the function failed to parse.
+		Fails if the entire token list is not matched.
+		"""
+
+		consumers = self.get_consumer_queue(node_type)
+
+		# tries every concrete nodes of type node_type
+		for consumer in consumers:
+			try:
+				tmp_queue = self.token_queue[:]
+				node = consumer(self)
+
+				# raises a ParseError if tokens are remaining unconsumed
+				if self.token_queue:
+					err = ParseError(
+						self.code,
+						self.token_queue[0].pos,
+						'The entire code could not be consumed.')
+					self.token_queue[:] = tmp_queue
+					raise err
+
 			except ParseError as e:
 				error = e
 				continue
@@ -124,7 +179,7 @@ class Parser:
 		# if the next token is not of the expected type
 		if token.type != token_type:
 			msg = 'Expected {}, got {}'.format(token_type.name, token.type.name)
-			raise ParseError(token.pos, msg)
+			raise ParseError(self.code, token.pos, msg)
 
 		return token
 
@@ -133,5 +188,5 @@ class Parser:
 		Parses a given string into a Program object.
 		"""
 
-		program = self.consume(Program)
+		program = self.parse(Program)
 		return program
