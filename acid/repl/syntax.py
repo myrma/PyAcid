@@ -23,11 +23,14 @@ def parse_repl_line(line):
         cmd = m.group('cmd')
         return OSCommand(cmd)
 
-    m = re.match(r':(?P<name>\w+)(?P<args>.*)', line)
+    m = re.match(r':(?P<name>\w+)\s*(?P<args>.*)', line)
 
     if m is not None:
         name = m.group('name')
-        args = m.group('args').split()
+
+        parser = Parser(m.group('args'), '<stdin>')
+        args = parser.many(Expr)
+
         return Command(name, args)
 
     parser = Parser(line, '<stdin>')
@@ -39,4 +42,4 @@ def parse_repl_line(line):
             return EvalStmt(parser.parse(Stmt))
         except ParseError:
             msg = 'Failed to parse REPL command.'
-            raise ParseError(line, SourcePos(0, 0), msg) from None
+            raise ParseError(line, SourcePos(1, 1), msg) from None

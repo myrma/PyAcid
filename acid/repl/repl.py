@@ -10,6 +10,7 @@ Contributors: myrma
 import os
 import sys
 import inspect
+import traceback
 from collections import OrderedDict
 
 from acid.repl.command import REPLCommand
@@ -21,16 +22,17 @@ from acid.exception import ParseError
 
 DEFAULT_REPL_HEADER = """
 
-        ___───┬───────__
-      ╱  '   ╱    |     ╲
-    ╱   ,  ╱ ╲__  |  __╱ ╲
-   ╱ `     |     ╲_|_╱    |
-  |   ' . |______╱ ╲______|
-  |'  .   |     ╱╲ ╱╲     |
-   ╲   .  |    ╱  |  |    |
-    ╲  ,   ╲ _╱   |   ╲  ╱
-      ╲  .  '╲_   |   _╱
-       '───_____╲_|__╱
+       ____,──┬───────._
+      ╱  '  _╱    │     ╲
+    ╱   ,  ╱ ╲__  │  __╱ ╲
+   ╱ `    │     ╲_│_╱     │
+  │   ' . │______╱ ╲______│
+  │'  .   │     ╱╲ ╱╲     │
+   ╲   .  │    ╱  │  │    │
+    ╲  ,   ╲ _╱   │   ╲ _╱
+      ╲  .  '╲_   │   _╱
+       '───.____╲_│__╱
+
 
 Acid - Implémentation Python
 Un projet de la communauté ZesteDeSavoir
@@ -111,9 +113,17 @@ class REPL:
                 cmd = self.read_command()
                 res = cmd.execute(self)
             except Exception as exc:
-                msg = 'File "{repl.path}", input #{repl.cmd_count}'.format(repl=self)
+                if self.path is None:
+                    msg = 'File <stdin>, input #{repl.cmd_count}'.format(repl=self)
+                else:
+                    msg = 'File "{repl.path}", input #{repl.cmd_count}'.format(repl=self)
+
                 print(msg)
-                print('An error has ocurred:\n{}'.format(exc))
+                print('An error has ocurred:')
+                print('{}: {}'.format(
+                    type(exc).__name__,
+                    ''.join(map(str, exc.args))
+                ))
             else:
                 self.cmd_count += 1
 
@@ -131,14 +141,10 @@ def set_prompt(self, string):
     Sets the REPL prompt.
     """
 
-    parser = Parser(string, '<stdin>')
-
-    try:
-        prompt = parser.consume(StringLiteral)
-    except ParseError:
-        print('`:prompt`: Malformed string')
-
-    self.prompt = prompt.value
+    if isinstance(string, str):
+        self.prompt = string
+    else:
+        print('`:prompt`: expected string')
 
 
 @REPL.register('clear', 'cls')

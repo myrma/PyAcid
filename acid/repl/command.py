@@ -79,7 +79,11 @@ class Command(REPLCommand):
 
     def execute(self, repl):
         try:
-            return repl.commands[self.name](repl, *self.args)
+            args = []
+            for arg in self.args:
+                args.append(EvalExpr(arg).execute(repl))
+
+            return repl.commands[self.name](repl, *args)
         except KeyError:
             print('Unknown command {!r}, please type :help to see the list of \
 commands'.format(self.name))

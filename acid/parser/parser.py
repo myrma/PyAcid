@@ -12,6 +12,7 @@ from collections import defaultdict
 
 from acid.parser.ast import *
 from acid.parser.lexer import TokenType, tokenize
+from acid.parser.types import SourcePos
 from acid.exception import ParseError
 
 
@@ -28,6 +29,12 @@ class Parser:
 		self.path = path
 		self.code = code
 		self.token_queue = list(tokenize(self.code))  # the tokenized string
+
+		if self.token_queue:
+			self.end_pos = self.token_queue[-1].pos
+		else:
+			self.end_pos = SourcePos(1, 1)
+
 		self.error = None
 
 	@classmethod
@@ -67,7 +74,6 @@ class Parser:
 					node = consumer(self)
 
 					if node is None:
-						pos = tmp_queue[0].pos
 						raise ParseError(self.code, pos, 'Consumer returned None')
 
 				except ParseError:
@@ -84,8 +90,8 @@ class Parser:
 					# tokens were consumed
 					raise ParseError(
 						self.code,
-						self.token_queue[0].pos,
-						'Unexpected EOF')
+						self.end_pos,
+						'Unexpected EOF') from None
 				else:
 					return node
 
@@ -182,6 +188,23 @@ class Parser:
 			raise ParseError(self.code, token.pos, msg)
 
 		return token
+
+	def many(self, node_type):
+		"""
+		Consumes zero or more occurences of a node of a given type.
+		"""
+
+		consumed = []
+
+		while True:
+			try:
+				nxt = self.consume(node_type)
+			except ParseError:
+				break
+			else:
+				consumed.append(nxt)
+
+		return consumed
 
 	def run(self):
 		"""

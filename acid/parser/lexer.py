@@ -37,7 +37,7 @@ class TokenType(Enum):
 	STRING_LITERAL = r'"([^"\\]|\\.)*"'
 	FLOAT_LITERAL = r'\d+\.\d+'
 	INT_LITERAL = r'\d+'
-	ATOM = r"[\w+\-'*/:,$<>=~#&|@ç^_%!?.]+"
+	ATOM = r"[\w+\-*/:,$<>=~#&|@ç^_%!?.]+"
 	WHITESPACE = r'\s+'
 
 
@@ -111,7 +111,7 @@ def tokenize(code):
 				elif token_type is not TokenType.WHITESPACE:
 						# copy the cursor to avoid unwanted reference
 						endpos = cursor.copy()
-						
+
 						span = SourceSpan(startpos, endpos)
 						tok = Token(token_type, value, span)
 						yield tok
