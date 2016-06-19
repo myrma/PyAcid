@@ -44,7 +44,7 @@ class REPL:
 
     commands = OrderedDict()
 
-    def __init__(self, path='<stdin>', prelude=default_env):
+    def __init__(self, path=None, prelude=default_env):
         self.path = path
         self.default_env = default_env.copy()
         self.environment = default_env.copy()
@@ -81,8 +81,10 @@ class REPL:
         """
         Reloads the current path into the environment.
         """
-
-        self.load(self.path)
+        if self.path is not None:
+            self.load(self.path)
+        else:
+            print('Error: No module loaded. Type `:load [file]` to load one.')
 
     def read_command(self):
         """
