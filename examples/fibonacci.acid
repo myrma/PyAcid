@@ -4,7 +4,7 @@
 
 // n-ième terme de la suite de Fibonacci
 (define fib (lambda (n)
-  (# fibs n)
+  (# (fibs n) (negate 1))
 ))
 
 // Suite de Fibonacci jusqu'au n-ième terme
